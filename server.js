@@ -91,6 +91,64 @@ app.get("/api/history/:id", (req, res) => {
   }
 });
 
+app.get("/api/history/export", (req, res) => {
+  try {
+    const items = readHistory();
+    const username = getUsername(req);
+    if (!username) {
+      res.status(401).json({ error: "未登录" });
+      return;
+    }
+    const filtered = items.filter((record) => record.username === username);
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="history-${encodeURIComponent(username)}.json"`
+    );
+    res.send(JSON.stringify({ items: filtered }, null, 2));
+  } catch (error) {
+    res.status(500).json({ error: String(error && error.message ? error.message : error) });
+  }
+});
+
+app.delete("/api/history", (req, res) => {
+  try {
+    const items = readHistory();
+    const username = getUsername(req);
+    if (!username) {
+      res.status(401).json({ error: "未登录" });
+      return;
+    }
+    const nextItems = items.filter((record) => record.username !== username);
+    writeHistory(nextItems);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: String(error && error.message ? error.message : error) });
+  }
+});
+
+app.delete("/api/history/:id", (req, res) => {
+  try {
+    const items = readHistory();
+    const username = getUsername(req);
+    if (!username) {
+      res.status(401).json({ error: "未登录" });
+      return;
+    }
+    const nextItems = items.filter(
+      (record) => !(record.id === req.params.id && record.username === username)
+    );
+    if (nextItems.length === items.length) {
+      res.status(404).json({ error: "记录不存在" });
+      return;
+    }
+    writeHistory(nextItems);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: String(error && error.message ? error.message : error) });
+  }
+});
+
 app.post("/api/analyze", upload.array("images", 20), async (req, res) => {
   try {
     const username = getUsername(req);

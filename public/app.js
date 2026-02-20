@@ -7,6 +7,8 @@ const copyBtn = document.getElementById("copyBtn");
 const uploadArea = document.getElementById("uploadArea");
 const historyList = document.getElementById("historyList");
 const refreshHistory = document.getElementById("refreshHistory");
+const clearHistory = document.getElementById("clearHistory");
+const exportHistory = document.getElementById("exportHistory");
 const currentUser = document.getElementById("currentUser");
 const switchUser = document.getElementById("switchUser");
 const loginMask = document.getElementById("loginMask");
@@ -102,6 +104,24 @@ const renderHistory = (items) => {
 
     actions.appendChild(viewBtn);
     actions.appendChild(copyBtnItem);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "ghost danger";
+    deleteBtn.textContent = "删除";
+    deleteBtn.addEventListener("click", async () => {
+      if (!confirm("确认删除这条记录？")) {
+        return;
+      }
+      const response = await fetch(`/api/history/${item.id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders()
+      });
+      if (response.ok) {
+        loadHistory();
+      }
+    });
+
+    actions.appendChild(deleteBtn);
     card.appendChild(meta);
     card.appendChild(text);
     card.appendChild(actions);
@@ -216,6 +236,39 @@ analyzeBtn.addEventListener("click", async () => {
 
 refreshHistory.addEventListener("click", () => {
   loadHistory();
+});
+
+clearHistory.addEventListener("click", async () => {
+  ensureLogin();
+  if (!confirm("确认清空当前用户的历史记录？")) {
+    return;
+  }
+  const response = await fetch("/api/history", {
+    method: "DELETE",
+    headers: getAuthHeaders()
+  });
+  if (response.ok) {
+    loadHistory();
+  }
+});
+
+exportHistory.addEventListener("click", async () => {
+  ensureLogin();
+  const response = await fetch("/api/history/export", {
+    headers: getAuthHeaders()
+  });
+  if (!response.ok) {
+    return;
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `history-${username}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 });
 
 copyBtn.addEventListener("click", async () => {

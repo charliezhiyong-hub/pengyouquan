@@ -159,6 +159,12 @@ body {
   cursor: pointer;
 }
 
+.ghost.danger {
+  border-color: #fecaca;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .history-list {
   margin-top: 12px;
   display: flex;
