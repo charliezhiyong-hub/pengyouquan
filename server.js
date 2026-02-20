@@ -180,7 +180,7 @@ app.post("/api/analyze", upload.array("images", 20), async (req, res) => {
     }));
 
     const body = {
-      model: "doubao-seed-1.6-thinking",
+      model: "ep-20260218111935-hr9jq",
       input: [
         { role: "system", content: [{ type: "input_text", text: systemPrompt }] },
         {
