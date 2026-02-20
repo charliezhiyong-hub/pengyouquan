@@ -142,7 +142,8 @@ const getAuthHeaders = () => {
   if (!username) {
     return {};
   }
-  return { "X-Username": username };
+  const encoded = encodeURIComponent(username);
+  return { "X-Username": encoded };
 };
 
 const ensureLogin = () => {

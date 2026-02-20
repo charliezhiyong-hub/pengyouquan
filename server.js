@@ -43,7 +43,12 @@ const getUsername = (req) => {
   if (!value) {
     return "";
   }
-  return String(value).trim();
+  const raw = String(value).trim();
+  try {
+    return decodeURIComponent(raw);
+  } catch (_error) {
+    return raw;
+  }
 };
 
 app.post("/api/login", (req, res) => {
