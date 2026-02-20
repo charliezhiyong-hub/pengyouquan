@@ -5,6 +5,8 @@ const analyzeBtn = document.getElementById("analyzeBtn");
 const resultBox = document.getElementById("resultBox");
 const copyBtn = document.getElementById("copyBtn");
 const uploadArea = document.getElementById("uploadArea");
+const historyList = document.getElementById("historyList");
+const refreshHistory = document.getElementById("refreshHistory");
 
 let files = [];
 
@@ -34,6 +36,77 @@ const refresh = () => {
     card.appendChild(remove);
     preview.appendChild(card);
   });
+};
+
+const formatTime = (value) => {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
+};
+
+const renderHistory = (items) => {
+  historyList.innerHTML = "";
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "history-empty";
+    empty.textContent = "暂无历史记录";
+    historyList.appendChild(empty);
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "history-item";
+
+    const meta = document.createElement("div");
+    meta.className = "history-meta";
+    meta.textContent = `${formatTime(item.createdAt)} · ${item.imageCount} 张`;
+
+    const text = document.createElement("div");
+    text.className = "history-text";
+    text.textContent = item.text || "";
+
+    const actions = document.createElement("div");
+    actions.className = "history-actions";
+
+    const viewBtn = document.createElement("button");
+    viewBtn.className = "ghost";
+    viewBtn.textContent = "查看";
+    viewBtn.addEventListener("click", () => {
+      resultBox.textContent = item.text || "未获取到分析结果";
+      refresh();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    const copyBtnItem = document.createElement("button");
+    copyBtnItem.className = "ghost";
+    copyBtnItem.textContent = "复制";
+    copyBtnItem.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(item.text || "");
+      copyBtnItem.textContent = "已复制";
+      setTimeout(() => {
+        copyBtnItem.textContent = "复制";
+      }, 1200);
+    });
+
+    actions.appendChild(viewBtn);
+    actions.appendChild(copyBtnItem);
+    card.appendChild(meta);
+    card.appendChild(text);
+    card.appendChild(actions);
+    historyList.appendChild(card);
+  });
+};
+
+const loadHistory = async () => {
+  const response = await fetch("/api/history");
+  const data = await response.json();
+  renderHistory(Array.isArray(data.items) ? data.items : []);
 };
 
 fileInput.addEventListener("change", (event) => {
@@ -84,6 +157,7 @@ analyzeBtn.addEventListener("click", async () => {
       resultBox.textContent = data.error || "分析失败，请稍后重试";
     } else {
       resultBox.textContent = data.text || "未获取到分析结果";
+      loadHistory();
     }
   } catch (error) {
     resultBox.textContent = String(error);
@@ -91,6 +165,10 @@ analyzeBtn.addEventListener("click", async () => {
     analyzeBtn.disabled = files.length < 5;
     refresh();
   }
+});
+
+refreshHistory.addEventListener("click", () => {
+  loadHistory();
 });
 
 copyBtn.addEventListener("click", async () => {
@@ -105,3 +183,4 @@ copyBtn.addEventListener("click", async () => {
 });
 
 refresh();
+loadHistory();

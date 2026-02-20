@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const fetch = require("node-fetch");
 const path = require("path");
+const fs = require("fs");
 
 const app = express();
 const storage = multer.memoryStorage();
@@ -11,6 +12,53 @@ const upload = multer({
 });
 
 app.use(express.static(path.join(__dirname, "public")));
+
+const dataDir = path.join(__dirname, "data");
+const historyPath = path.join(dataDir, "history.json");
+
+const ensureHistoryFile = () => {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  if (!fs.existsSync(historyPath)) {
+    fs.writeFileSync(historyPath, JSON.stringify({ items: [] }, null, 2), "utf8");
+  }
+};
+
+const readHistory = () => {
+  ensureHistoryFile();
+  const raw = fs.readFileSync(historyPath, "utf8");
+  const parsed = JSON.parse(raw || "{}");
+  return Array.isArray(parsed.items) ? parsed.items : [];
+};
+
+const writeHistory = (items) => {
+  ensureHistoryFile();
+  fs.writeFileSync(historyPath, JSON.stringify({ items }, null, 2), "utf8");
+};
+
+app.get("/api/history", (req, res) => {
+  try {
+    const items = readHistory();
+    res.json({ items });
+  } catch (error) {
+    res.status(500).json({ error: String(error && error.message ? error.message : error) });
+  }
+});
+
+app.get("/api/history/:id", (req, res) => {
+  try {
+    const items = readHistory();
+    const item = items.find((record) => record.id === req.params.id);
+    if (!item) {
+      res.status(404).json({ error: "记录不存在" });
+      return;
+    }
+    res.json({ item });
+  } catch (error) {
+    res.status(500).json({ error: String(error && error.message ? error.message : error) });
+  }
+});
 
 app.post("/api/analyze", upload.array("images", 20), async (req, res) => {
   try {
@@ -83,7 +131,17 @@ app.post("/api/analyze", upload.array("images", 20), async (req, res) => {
       text = JSON.stringify(data);
     }
 
-    res.json({ text });
+    const items = readHistory();
+    const record = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+      imageCount: files.length,
+      text
+    };
+    const nextItems = [record, ...items].slice(0, 50);
+    writeHistory(nextItems);
+
+    res.json({ text, record });
   } catch (error) {
     res.status(500).json({ error: String(error && error.message ? error.message : error) });
   }
