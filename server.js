@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const multer = require("multer");
 const fetch = require("node-fetch");
@@ -14,12 +15,16 @@ const upload = multer({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-const dataDir = path.join(__dirname, "data");
-const historyPath = path.join(dataDir, "history.json");
+const historyDir =
+  process.env.HISTORY_DIR || (process.env.VERCEL ? path.join("/tmp", "data") : path.join(__dirname, "data"));
+const historyPath = path.join(historyDir, "history.json");
 
 const ensureHistoryFile = () => {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+  if (!historyDir) {
+    return;
+  }
+  if (!fs.existsSync(historyDir)) {
+    fs.mkdirSync(historyDir, { recursive: true });
   }
   if (!fs.existsSync(historyPath)) {
     fs.writeFileSync(historyPath, JSON.stringify({ items: [] }, null, 2), "utf8");
@@ -27,15 +32,23 @@ const ensureHistoryFile = () => {
 };
 
 const readHistory = () => {
-  ensureHistoryFile();
-  const raw = fs.readFileSync(historyPath, "utf8");
-  const parsed = JSON.parse(raw || "{}");
-  return Array.isArray(parsed.items) ? parsed.items : [];
+  try {
+    ensureHistoryFile();
+    const raw = fs.readFileSync(historyPath, "utf8");
+    const parsed = JSON.parse(raw || "{}");
+    return Array.isArray(parsed.items) ? parsed.items : [];
+  } catch (_error) {
+    return [];
+  }
 };
 
 const writeHistory = (items) => {
-  ensureHistoryFile();
-  fs.writeFileSync(historyPath, JSON.stringify({ items }, null, 2), "utf8");
+  try {
+    ensureHistoryFile();
+    fs.writeFileSync(historyPath, JSON.stringify({ items }, null, 2), "utf8");
+  } catch (_error) {
+    // ignore write errors on read-only or ephemeral file systems
+  }
 };
 
 const getUsername = (req) => {
