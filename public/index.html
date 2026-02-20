@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>朋友圈照片分析</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <h1>朋友圈照片分析</h1>
+        <p>上传 5 张及以上照片或截图，生成简短有效的交友建议</p>
+      </header>
+
+      <section class="card">
+        <div class="upload-area" id="uploadArea">
+          <input id="fileInput" type="file" accept="image/*" multiple />
+          <div class="upload-info">
+            <strong>点击或拖拽上传</strong>
+            <span>支持 JPG/PNG，单张不超过 10MB</span>
+          </div>
+        </div>
+        <div class="count">已选择 <span id="fileCount">0</span> 张</div>
+        <div class="preview" id="preview"></div>
+        <button id="analyzeBtn" class="primary" disabled>开始分析</button>
+        <div class="hint">分析基于公开内容，结果仅供参考</div>
+      </section>
+
+      <section class="card result">
+        <div class="result-header">
+          <h2>分析结果</h2>
+          <button id="copyBtn" class="ghost" disabled>复制结果</button>
+        </div>
+        <div id="resultBox" class="result-box">等待分析</div>
+      </section>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+</html>
