@@ -8,6 +8,12 @@
   </head>
   <body>
     <div class="page">
+      <div class="topbar">
+        <div class="user-info">
+          当前用户：<span id="currentUser">未登录</span>
+        </div>
+        <button id="switchUser" class="ghost">切换用户</button>
+      </div>
       <header class="header">
         <h1>朋友圈照片分析</h1>
         <p>上传 5 张及以上照片或截图，生成简短有效的交友建议</p>
@@ -42,6 +48,14 @@
         </div>
         <div id="historyList" class="history-list"></div>
       </section>
+    </div>
+    <div id="loginMask" class="login-mask">
+      <div class="login-card">
+        <h3>请输入用户名</h3>
+        <p>仅用于区分历史记录</p>
+        <input id="usernameInput" type="text" placeholder="例如：小明" />
+        <button id="loginBtn" class="primary">进入</button>
+      </div>
     </div>
     <script src="/app.js"></script>
   </body>

@@ -7,8 +7,14 @@ const copyBtn = document.getElementById("copyBtn");
 const uploadArea = document.getElementById("uploadArea");
 const historyList = document.getElementById("historyList");
 const refreshHistory = document.getElementById("refreshHistory");
+const currentUser = document.getElementById("currentUser");
+const switchUser = document.getElementById("switchUser");
+const loginMask = document.getElementById("loginMask");
+const usernameInput = document.getElementById("usernameInput");
+const loginBtn = document.getElementById("loginBtn");
 
 let files = [];
+let username = localStorage.getItem("username") || "";
 
 const refresh = () => {
   preview.innerHTML = "";
@@ -103,9 +109,48 @@ const renderHistory = (items) => {
   });
 };
 
+const updateLoginUI = () => {
+  currentUser.textContent = username || "未登录";
+  loginMask.classList.toggle("show", !username);
+  if (!username) {
+    usernameInput.value = "";
+    usernameInput.focus();
+  }
+};
+
+const getAuthHeaders = () => {
+  if (!username) {
+    return {};
+  }
+  return { "X-Username": username };
+};
+
+const ensureLogin = () => {
+  if (!username) {
+    updateLoginUI();
+    throw new Error("未登录");
+  }
+};
+
 const loadHistory = async () => {
-  const response = await fetch("/api/history");
+  if (!username) {
+    renderHistory([]);
+    updateLoginUI();
+    return;
+  }
+  const response = await fetch("/api/history", {
+    headers: getAuthHeaders()
+  });
   const data = await response.json();
+  if (!response.ok) {
+    renderHistory([]);
+    if (response.status === 401) {
+      username = "";
+      localStorage.removeItem("username");
+      updateLoginUI();
+    }
+    return;
+  }
   renderHistory(Array.isArray(data.items) ? data.items : []);
 };
 
@@ -147,9 +192,11 @@ analyzeBtn.addEventListener("click", async () => {
   files.forEach((file) => formData.append("images", file));
 
   try {
+    ensureLogin();
     const response = await fetch("/api/analyze", {
       method: "POST",
-      body: formData
+      body: formData,
+      headers: getAuthHeaders()
     });
 
     const data = await response.json();
@@ -182,5 +229,39 @@ copyBtn.addEventListener("click", async () => {
   }, 1200);
 });
 
+loginBtn.addEventListener("click", async () => {
+  const value = usernameInput.value.trim();
+  if (!value) {
+    usernameInput.focus();
+    return;
+  }
+  const response = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: value })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    return;
+  }
+  username = data.username;
+  localStorage.setItem("username", username);
+  updateLoginUI();
+  loadHistory();
+});
+
+usernameInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    loginBtn.click();
+  }
+});
+
+switchUser.addEventListener("click", () => {
+  username = "";
+  localStorage.removeItem("username");
+  updateLoginUI();
+});
+
 refresh();
+updateLoginUI();
 loadHistory();

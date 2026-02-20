@@ -11,6 +11,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }
 });
 
+app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const dataDir = path.join(__dirname, "data");
@@ -37,10 +38,33 @@ const writeHistory = (items) => {
   fs.writeFileSync(historyPath, JSON.stringify({ items }, null, 2), "utf8");
 };
 
+const getUsername = (req) => {
+  const value = req.get("x-username");
+  if (!value) {
+    return "";
+  }
+  return String(value).trim();
+};
+
+app.post("/api/login", (req, res) => {
+  const username = String((req.body && req.body.username) || "").trim();
+  if (!username) {
+    res.status(400).json({ error: "请输入用户名" });
+    return;
+  }
+  res.json({ username });
+});
+
 app.get("/api/history", (req, res) => {
   try {
     const items = readHistory();
-    res.json({ items });
+    const username = getUsername(req);
+    if (!username) {
+      res.status(401).json({ error: "未登录" });
+      return;
+    }
+    const filtered = items.filter((record) => record.username === username);
+    res.json({ items: filtered });
   } catch (error) {
     res.status(500).json({ error: String(error && error.message ? error.message : error) });
   }
@@ -49,7 +73,14 @@ app.get("/api/history", (req, res) => {
 app.get("/api/history/:id", (req, res) => {
   try {
     const items = readHistory();
-    const item = items.find((record) => record.id === req.params.id);
+    const username = getUsername(req);
+    if (!username) {
+      res.status(401).json({ error: "未登录" });
+      return;
+    }
+    const item = items.find(
+      (record) => record.id === req.params.id && record.username === username
+    );
     if (!item) {
       res.status(404).json({ error: "记录不存在" });
       return;
@@ -62,6 +93,12 @@ app.get("/api/history/:id", (req, res) => {
 
 app.post("/api/analyze", upload.array("images", 20), async (req, res) => {
   try {
+    const username = getUsername(req);
+    if (!username) {
+      res.status(401).json({ error: "未登录" });
+      return;
+    }
+
     const apiKey = process.env.ARK_API_KEY;
     if (!apiKey) {
       res.status(500).json({ error: "ARK_API_KEY 未配置" });
@@ -136,9 +173,13 @@ app.post("/api/analyze", upload.array("images", 20), async (req, res) => {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       createdAt: new Date().toISOString(),
       imageCount: files.length,
+      username,
       text
     };
-    const nextItems = [record, ...items].slice(0, 50);
+    const sameUser = items.filter((item) => item.username === username);
+    const otherUsers = items.filter((item) => item.username !== username);
+    const nextUserItems = [record, ...sameUser].slice(0, 50);
+    const nextItems = [...nextUserItems, ...otherUsers];
     writeHistory(nextItems);
 
     res.json({ text, record });
